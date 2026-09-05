@@ -1,0 +1,22 @@
+services:
+  app:
+    build: .
+    env_file: .env
+    ports:
+      - "${API_PORT:-8100}:8100"
+    depends_on:
+      - db
+
+  db:
+    image: paradedb/paradedb:pg17
+    environment:
+      POSTGRES_USER: narok
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: narok
+    ports:
+      - "5433:5432"
+    volumes:
+      - narok-db:/var/lib/postgresql/data
+
+volumes:
+  narok-db:
