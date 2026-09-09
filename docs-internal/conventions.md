@@ -13,6 +13,14 @@ décisions structurantes vivent dans les [ADR](./adr/README.md).
    `0.5`, jamais mesurée, tombait au milieu de la population légitime et rejetait des questions
    valides (ex : « Comment sécuriser la connexion avec un code à usage unique ? » à 0.4899, dont le
    bon chunk était pourtant classé premier). Le corpus `portfolio` reste non calibré.
+
+   **Calibré pour `mdn` à `0.55`** (2026-09-09, 4925 chunks) : légitimes de 0.6019 à 0.7356, hors
+   sujet de 0.3085 à 0.5038, milieu à 0.553 — 0 erreur dans les deux sens. Le seuil est nettement
+   plus haut que celui de `docs`, et la marge deux fois plus fine (0.098 contre 0.176) : MDN est
+   vaste et généraliste, donc une question quelconque (« Quel temps fera-t-il demain ? », 0.5038)
+   y trouve toujours une page qui évoque vaguement un écran ou une valeur. **Un seuil ne se
+   transpose donc pas d'un corpus à l'autre** : chaque corpus se calibre avec `bun run eval
+   <corpus> --fast`, dont la sortie donne directement le point milieu.
 2. **Prompt système** : reste dans le rôle même si le seuil 1 est franchi mais que la question
    dérive (cf. test qualité Granite du 2026-09-04 — résiste à "ignore tes instructions").
 
@@ -45,6 +53,34 @@ Image officielle `ghcr.io/ggml-org/llama.cpp:server`, un service par modèle. Po
   face aux autres services de l'hôte en cas de rafale de requêtes.
 - Le passage des binaires locaux aux conteneurs a été vérifié à l'identique : `bun run eval` rend
   exactement les mêmes similarités (5/7, MRR 0,429).
+
+### Budget de tokens (serveur `llama-chat`)
+
+Le serveur a d'abord tourné avec `-c 4096`. Sur un contexte de 8 chunks, le prompt atteint ~4000
+tokens : il ne restait que **82 tokens pour la réponse**, tronquée en plein mot. Aucune erreur n'est
+levée — `finish_reason` vaut `length`, comme lors d'un dépassement de `max_tokens`, ce qui égare le
+diagnostic. Le signe distinctif : `completion_tokens` très inférieur à `max_tokens`, et identique
+qu'on demande 500 ou 2000 tokens. La fenêtre est donc à `-c 8192`.
+
+Mesures sur ce CPU (2026-09-09, 4 threads, sans GPU) :
+
+| Poste | Débit | Ordre de grandeur |
+| --- | --- | --- |
+| Prefill (lecture du contexte) | ~92 tk/s | 3500 tokens → 38 s |
+| Decode (écriture de la réponse) | ~22 tk/s | 400 tokens → 18 s |
+
+Conséquences, contre-intuitives :
+
+- **Agrandir la fenêtre ne coûte pas de temps.** Le prefill se paie sur les tokens réellement
+  envoyés, pas sur la taille allouée ; `-c` ne coûte que de la RAM. Passer de 4096 à 8192 n'a rien
+  changé à l'empreinte mesurée du conteneur (~6 Go) — Granite 4.0-H est un hybride Mamba dont la
+  plupart des couches ont un état de taille constante, indépendant de la longueur du contexte.
+- **Ce qui coûte du temps, c'est le nombre de chunks et la longueur de la réponse.** D'où
+  `DEFAULT_MAX_TOKENS = 400` et la consigne de concision dans le prompt système : sans elle, une
+  réponse libre monte à 756 tokens, soit 30 s de décodage pour du récapitulatif.
+- Le nombre de chunks reste néanmoins fixé par la qualité, pas par la vitesse : voir
+  `FINAL_CONTEXT_SIZE`, un contexte de 5 divise le temps de prefill mais fait tomber les réponses
+  correctes de 10/10 à 8/10 sur `mdn`.
 
 ## Version Postgres (image `db`)
 
@@ -135,8 +171,8 @@ d'une échelle à l'autre.
 
 Deux niveaux de mesure, délibérément séparés :
 
-- **retrieval** : le passage attendu (identifié par une chaîne qui n'existe que dans lui) est-il
-  parmi les extraits envoyés au modèle — hit-rate@8 et MRR ;
+- **retrieval** : un document qui répond (`expectedDoc`, fragment de chemin, variantes séparées par
+  `|`) est-il parmi les extraits envoyés au modèle — hit-rate@8 et MRR ;
 - **réponse** : le texte généré contient-il les termes attendus, et pas ceux d'une confusion connue.
 
 Ne mesurer que le retrieval induit en erreur, et l'a effectivement fait : deux configurations
@@ -144,6 +180,15 @@ manquaient toutes deux le passage attendu, donc paraissaient équivalentes, alor
 le modèle à la bonne réponse et l'autre à inventer un nom de champ plausible mais faux. C'est ce
 qui a fait retenir la mauvaise configuration avant que le problème ne soit repéré. `--fast` saute
 la génération quand seul le retrieval est en jeu.
+
+**Ancrer le niveau retrieval sur une phrase exacte est un piège.** La première version cherchait une
+chaîne présente uniquement dans la page de référence attendue : elle annonçait 2/10 sur `mdn` là où
+les réponses étaient bonnes 8 fois sur 10, en comptant comme échec tout retrieval ayant ramené le
+guide correspondant — qui répond pourtant aussi bien. Mesuré au niveau du document, le même
+retrieval donne 7/10 et MRR 0.517. Une phrase se déplace aussi d'un découpage à l'autre, ce qui
+rendrait la mesure incomparable après un changement de chunking. D'où `expectedDoc`. Corollaire :
+les fragments doivent rester étroits — `at-rules/@media` attrape les 43 pages de descripteurs et
+rend le cas trivialement gagnant, `at-rules/@media/index.md` non.
 
 ### Corpus étalon
 

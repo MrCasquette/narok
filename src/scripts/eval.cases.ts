@@ -5,8 +5,13 @@
 // donc jugées équivalentes, alors que l'une menait le modèle à répondre juste et l'autre à
 // inventer un nom de champ plausible mais faux) :
 //
-// - `marker` : chaîne présente uniquement dans le passage attendu. Mesure le retrieval, sans
-//   dépendre d'identifiants de chunks qui changent à chaque ré-ingestion.
+// - `expectedDoc` : fragment du chemin d'un document qui répond à la question. Mesure le retrieval
+//   sans dépendre d'identifiants de chunks, qui changent à chaque ré-ingestion, ni d'une phrase
+//   exacte, qui se déplace d'un découpage à l'autre. Plusieurs documents répondent souvent
+//   légitimement (sur MDN, la page de référence et le guide correspondant) : les variantes
+//   acceptables se séparent par `|`. Une première version ancrait le marqueur sur une phrase de la
+//   seule page de référence : elle affichait 2/10 le 2026-09-09 là où les réponses étaient bonnes
+//   8 fois sur 10, en comptant comme échec un retrieval qui avait ramené le bon guide.
 // - `expectedInAnswer` : ce que la réponse générée doit contenir. Mesure ce qui compte vraiment.
 //   Un passage manquant ne signifie pas une réponse fausse : les passages voisins et l'en-tête de
 //   document suffisent souvent.
@@ -14,7 +19,7 @@
 export type EvalCase = {
   id: string
   question: string
-  marker: string
+  expectedDoc: string
   // Un groupe par exigence ; à l'intérieur d'un groupe, les variantes acceptables sont séparées
   // par `|`. La réponse est jugée correcte si chaque groupe est satisfait. Insensible à la casse.
   expectedInAnswer: string[]
@@ -34,7 +39,7 @@ const docsCases: EvalCase[] = [
   {
     id: 'm2a',
     question: 'Quel type de champ permet de stocker différentes sections de contenu sur une page ?',
-    marker: 'Builder (M2A)',
+    expectedDoc: 'many-to-any-relationships|3.interfaces|5.relationships',
     expectedInAnswer: ['Many-to-Any|M2A|Builder'],
     wrongAnswerSigns: ['Block Editor'],
   },
@@ -42,38 +47,38 @@ const docsCases: EvalCase[] = [
     id: '2fa',
     question:
       "Comment sécuriser la connexion des utilisateurs avec un code à usage unique généré par une application externe ?",
-    marker: 'otpauth_url',
+    expectedDoc: '03.auth/5.2fa',
     expectedInAnswer: ['2FA|deux facteurs|two-factor', 'OTP|usage unique'],
   },
   {
     id: 'static-tokens',
     question: "Quel type de jeton d'accès ne périme jamais et se génère depuis la page profil d'un utilisateur ?",
-    marker: 'Static Tokens',
+    expectedDoc: 'tokens-cookies|_partials/authentication',
     expectedInAnswer: ['statique|static'],
   },
   {
     id: 'filter-empty',
     question: "Comment écrire une condition de filtre qui vérifie qu'un champ n'est pas vide ?",
-    marker: '_nempty',
+    expectedDoc: 'filter-rules',
     expectedInAnswer: ['_nempty'],
   },
   {
     id: 'realtime-auth',
     question: 'Quels sont les différents modes pour authentifier une connexion en temps réel ?',
-    marker: 'WEBSOCKETS_REST_AUTH',
+    expectedDoc: 'configuration/realtime|07.realtime/1.authentication',
     expectedInAnswer: ['handshake', 'strict', 'public'],
   },
   {
     id: 'webhooks',
     question: 'Comment envoyer automatiquement des données vers un outil externe quand un contenu est publié ?',
-    marker: 'Import data from Webhook',
+    expectedDoc: 'use-directus-webhooks-with-clay',
     expectedInAnswer: ['webhook', 'Flow'],
   },
   {
     id: 'filter-groups',
     question:
       "Comment combiner plusieurs critères de filtre pour qu'un item corresponde à toutes les conditions à la fois ?",
-    marker: 'And / Or Groups',
+    expectedDoc: '02.content/1.explore',
     expectedInAnswer: ['AND|ET'],
   },
 ]
@@ -85,62 +90,62 @@ const mdnCases: EvalCase[] = [
   {
     id: 'supports',
     question: "Comment n'appliquer des styles que si le navigateur gère une propriété donnée ?",
-    marker: 'déclarations CSS qui dépendent du support',
+    expectedDoc: 'at-rules/@supports',
     expectedInAnswer: ['@supports'],
   },
   {
     id: 'font-face',
     question: "Comment utiliser une police d'écriture qui n'est pas installée sur la machine du visiteur ?",
-    marker: "définir une police d'écriture particulière",
+    expectedDoc: 'at-rules/@font-face/index.md|guides/fonts',
     expectedInAnswer: ['@font-face'],
   },
   {
     id: 'variables',
     question: 'Comment définir une valeur réutilisable dans ma feuille de style pour éviter de la répéter partout ?',
-    marker: 'variables en cascade dans les propriétés CSS',
+    expectedDoc: 'cascading_variables',
     expectedInAnswer: ['propriété personnalisée|propriétés personnalisées|variable|--', 'var('],
   },
   {
     id: 'flexbox',
     question: 'Comment répartir des éléments côte à côte de façon souple dans un conteneur ?',
-    marker: 'les trois éléments fils deviennent des éléments flexibles',
+    expectedDoc: 'flexible_box_layout',
     expectedInAnswer: ['flex'],
   },
   {
     id: 'layer',
     question: "Comment organiser mes styles en couches pour maîtriser lesquels l'emportent sur les autres ?",
-    marker: 'déclarer une couche de cascade',
+    expectedDoc: 'at-rules/@layer',
     expectedInAnswer: ['@layer|couche de cascade'],
   },
   {
     id: 'media',
     question: "Comment changer la mise en page selon la largeur de l'écran ?",
-    marker: "appliquer une partie d'une feuille de styles en fonction du résultat",
+    expectedDoc: 'at-rules/@media/index.md',
     expectedInAnswer: ['@media'],
   },
   {
     id: 'keyframes',
     question: "Comment décrire les étapes intermédiaires d'une animation ?",
-    marker: 'définir les étapes qui composent la séquence',
+    expectedDoc: 'at-rules/@keyframes|guides/animations',
     expectedInAnswer: ['@keyframes'],
   },
   {
     id: 'container',
     question: 'Comment adapter un composant à la taille de son conteneur plutôt qu’à celle de la fenêtre ?',
-    marker: 'règle conditionnelle de groupe qui applique des styles',
+    expectedDoc: 'at-rules/@container|guides/containment',
     expectedInAnswer: ['@container'],
     wrongAnswerSigns: ['@media'],
   },
   {
     id: 'nth-child',
-    question: 'Comment cibler un élément selon sa position parmi ses voisins ?',
-    marker: "en se basant sur l'indice",
+    question: 'Comment styliser un élément selon son rang parmi les enfants de son parent, par exemple une ligne sur deux ?',
+    expectedDoc: 'selectors/_colon_nth-child|guides/selectors',
     expectedInAnswer: [':nth-child'],
   },
   {
     id: 'attribute-selector',
     question: 'Comment cibler les éléments qui possèdent un attribut particulier ?',
-    marker: "en fonction de la présence d'un attribut donné",
+    expectedDoc: 'attribute_selectors|selectors/attribute',
     expectedInAnswer: ["sélecteur d'attribut|[attr|crochets"],
   },
 ]

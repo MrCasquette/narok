@@ -35,6 +35,11 @@ export async function embedQuery(text: string): Promise<number[]> {
   return embedRaw(`Instruct: ${RETRIEVAL_INSTRUCTION}\nQuery:${text}`)
 }
 
+// Plafond de génération. Le décodage coûte ~22 tokens/s sur ce CPU (mesuré le 2026-09-09) : 400
+// tokens plafonnent la réponse à ~18s, et une réponse documentaire tient dans ce budget. Laisser
+// filer coûte cher pour rien — une réponse libre est montée à 756 tokens, soit +30s.
+const DEFAULT_MAX_TOKENS = 400
+
 export async function chat(
   messages: ChatMessage[],
   options?: { temperature?: number; maxTokens?: number },
@@ -45,7 +50,7 @@ export async function chat(
     body: JSON.stringify({
       messages,
       temperature: options?.temperature ?? 0.3,
-      max_tokens: options?.maxTokens ?? 500,
+      max_tokens: options?.maxTokens ?? DEFAULT_MAX_TOKENS,
     }),
   })
   if (!res.ok) throw new Error(`llama chat a échoué : ${res.status}`)
@@ -60,7 +65,7 @@ export async function* chatStream(messages: ChatMessage[]): AsyncGenerator<strin
   const res = await fetch(`${env.LLAMA_CHAT_URL}/v1/chat/completions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, temperature: 0.3, max_tokens: 500, stream: true }),
+    body: JSON.stringify({ messages, temperature: 0.3, max_tokens: DEFAULT_MAX_TOKENS, stream: true }),
   })
   if (!res.ok || !res.body) throw new Error(`llama chat a échoué : ${res.status}`)
 

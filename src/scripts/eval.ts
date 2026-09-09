@@ -12,7 +12,7 @@ import { type EvalCase, evalSets } from './eval.cases.js'
 // production. Sert à comparer une modification à l'état antérieur : mesurer, modifier, remesurer.
 //
 // Deux niveaux, volontairement distincts :
-// - le retrieval (le passage attendu est-il dans les extraits envoyés au modèle) ;
+// - le retrieval (un document qui répond est-il dans les extraits envoyés au modèle) ;
 // - la réponse (le texte généré contient-il ce qu'on attend).
 //
 // Ne juger que le premier induit en erreur : deux configurations peuvent manquer toutes deux le
@@ -59,7 +59,7 @@ type CaseOutcome = {
 async function runCase(testCase: EvalCase, corpusKey: string, threshold: number): Promise<CaseOutcome> {
   const { finalChunks, candidates, bestSimilarity } = await retrieve(testCase.question, corpusKey)
 
-  const index = finalChunks.findIndex((chunk) => chunk.content.includes(testCase.marker))
+  const index = finalChunks.findIndex((chunk) => groupMatches(chunk.documentId, testCase.expectedDoc))
   const rejected = !Retrieval.isInScope(candidates, threshold)
 
   if (skipAnswers) {

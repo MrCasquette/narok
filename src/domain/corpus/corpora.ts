@@ -29,9 +29,12 @@ export const corpora: Record<string, Corpus> = {
     label: 'MDN Web Docs — CSS (français)',
     sourcePath: './content/mdn',
     systemPromptTopic: 'la documentation CSS de MDN Web Docs',
-    // Provisoire, à calibrer avec `bun run eval mdn` une fois le corpus indexé (la mesure affiche
-    // le seuil idéal). Ne pas reprendre par analogie la valeur d'un autre corpus.
-    minSimilarityThreshold: 0.38,
+    // Calibré sur le corpus indexé (2026-09-09, 4925 chunks) : questions légitimes de 0.6019 à
+    // 0.7356, hors sujet de 0.3085 à 0.5038, milieu à 0.553. Marge deux fois plus fine que sur
+    // `docs` (0.098 contre 0.176) : MDN est vaste et généraliste, une question quelconque y trouve
+    // toujours une page qui parle vaguement d'écran ou de valeur. D'où un seuil bien plus haut —
+    // le reprendre par analogie d'un corpus à l'autre serait une erreur.
+    minSimilarityThreshold: 0.55,
   },
 
   portfolio: {

@@ -50,9 +50,14 @@ services:
     image: ghcr.io/ggml-org/llama.cpp:server
     labels:
       - "wud.watch.digest=true"
+    # -c 8192 : avec 4096, un contexte de 8 chunks occupait ~4000 tokens et il n'en restait que 82
+    # pour la réponse, tronquée en plein mot sans erreur visible (finish_reason=length, mesuré le
+    # 2026-09-09). Agrandir la fenêtre ne coûte pas de temps — le prefill se paie sur les tokens
+    # réellement envoyés (92 tk/s mesurés), pas sur la taille allouée — seulement de la RAM, et
+    # Granite 4.0-H est un hybride Mamba dont la plupart des couches ont un état de taille fixe.
     command: >
       -m /models/granite-4.0-h-tiny-Q4_K_M.gguf
-      -c 4096 --threads 4
+      -c 8192 --threads 4
       --host 0.0.0.0 --port 8080
     volumes:
       - ${LLAMA_MODELS_DIR:-/home/vincent/llm-test/models}:/models:ro

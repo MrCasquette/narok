@@ -37,6 +37,9 @@
     font-size: 13px;
     line-height: 1.6;
   }
+  /* Règle générale d'abord : placée après les sélecteurs plus spécifiques ci-dessous, elle ne
+     s'appliquerait pas comme attendu (spécificité décroissante). */
+  ::selection { background-color: var(--color-primary); color: white; }
   pre[class*='language-']::selection, pre[class*='language-'] ::selection,
   code[class*='language-']::selection, code[class*='language-'] ::selection {
     color: inherit;
@@ -84,7 +87,6 @@
     display: flex;
     justify-content: center;
   }
-  ::selection { background-color: var(--color-primary); color: white; }
   ::-webkit-scrollbar { width: 10px; }
   ::-webkit-scrollbar-track { background: var(--color-dark); }
   ::-webkit-scrollbar-thumb { background: var(--color-secondary); border-radius: 5px; }
@@ -256,7 +258,7 @@
   <form id="form">
     <textarea id="question" placeholder="Écris ta question…" rows="1" required></textarea>
     <button id="send" type="submit" aria-label="Envoyer">
-      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.94 2.94a1.5 1.5 0 0 1 1.62-.32l17 7a1.5 1.5 0 0 1 0 2.76l-17 7a1.5 1.5 0 0 1-2.06-1.75L4.5 12 2.5 5.37a1.5 1.5 0 0 1 .44-2.43Z"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor" role="img" aria-label="Envoyer"><title>Envoyer</title><path d="M2.94 2.94a1.5 1.5 0 0 1 1.62-.32l17 7a1.5 1.5 0 0 1 0 2.76l-17 7a1.5 1.5 0 0 1-2.06-1.75L4.5 12 2.5 5.37a1.5 1.5 0 0 1 .44-2.43Z"/></svg>
     </button>
   </form>
 </div>

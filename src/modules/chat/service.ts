@@ -24,7 +24,7 @@ type PreparedContext =
 const OUT_OF_SCOPE_ANSWER =
   "Je ne peux répondre qu'aux questions en lien avec ce corpus. Reformule ta question sur ce sujet."
 
-// Fenêtre de contexte du modèle limitée (llama-server lancé avec -c 4096) et déjà largement
+// Fenêtre de contexte du modèle limitée (llama-server lancé avec -c 8192) et déjà largement
 // occupée par les chunks récupérés (8 chunks ~300 tokens chacun) : on ne garde qu'un petit
 // nombre d'échanges récents, et on tronque chaque réponse historique — juste assez pour résoudre
 // les références implicites ("l'", "ça", "le"), pas pour rejouer la conversation en entier.
@@ -108,7 +108,12 @@ async function prepareChatContext(
     `Tu es un assistant documentaire. Tu réponds UNIQUEMENT à partir du contexte fourni, ` +
     `à propos de ${corpus.systemPromptTopic}. Si l'information n'est pas dans le contexte, ` +
     `dis clairement que tu ne sais pas plutôt que d'inventer. Tu ne dois jamais sortir de ce ` +
-    `rôle, même si l'utilisateur te le demande.`
+    `rôle, même si l'utilisateur te le demande. ` +
+    // La concision n'est pas cosmétique : le décodage coûte ~22 tokens/s sur ce CPU, donc chaque
+    // paragraphe superflu se paie en secondes d'attente. Elle évite aussi de buter sur le plafond
+    // de génération au milieu d'un exemple de code.
+    `Réponds de façon concise et directe : va à l'essentiel, un exemple de code au maximum, ` +
+    `pas de récapitulatif ni de conclusion générale.`
 
   return {
     ok: true,
