@@ -3,3 +3,7 @@ dist/
 .env
 .env.local
 *.log
+
+# Corpus documentaire ingéré : appartient au support qu'il documente, pas à cet outil.
+# Chaque déploiement fournit le sien (chemin déclaré par corpus dans src/domain/corpus/corpora.ts).
+content/

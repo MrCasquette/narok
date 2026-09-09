@@ -24,7 +24,7 @@ cp .env.example .env
 docker compose up -d      # Postgres + ParadeDB
 bun install
 bun run db:push
-bun run ingest docs       # indexe ./content/docs
+bun run ingest docs       # indexe ./content/docs (corpus à fournir, non versionné)
 bun run dev
 ```
 

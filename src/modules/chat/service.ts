@@ -34,10 +34,10 @@ const MAX_HISTORY_ANSWER_CHARS = 400
 // Résout uniquement les références implicites de l'historique ("comment l'utiliser ?" -> "comment
 // utiliser le champ X ?"), sans tenter de deviner le vocabulaire technique de la doc : un petit LLM
 // qui n'a jamais lu le corpus ne peut pas fiablement produire les noms exacts qui y sont employés
-// (mesuré : il recopie la question telle quelle plutôt que d'halluciner un terme). Ce rapprochement
-// vocabulaire/doc est désormais fait à l'indexation par les questions hypothétiques générées à
-// partir des chunks eux-mêmes (HyPE, voir ingest.ts et retrieval.repository.ts), pas ici. Sans
-// historique, aucun appel LLM n'est nécessaire : la question part telle quelle vers le retrieval.
+// (mesuré : il recopie la question telle quelle plutôt que d'halluciner un terme). Les tentatives
+// de combler cet écart de vocabulaire, à la requête comme à l'indexation, ont toutes dégradé la
+// mesure — voir docs-internal/conventions.md. Sans historique, aucun appel LLM n'est nécessaire :
+// la question part telle quelle vers le retrieval.
 async function resolveSearchQuery(history: HistoryTurn[], question: string): Promise<string> {
   if (history.length === 0) return question
 
