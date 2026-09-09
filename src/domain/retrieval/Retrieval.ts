@@ -6,10 +6,10 @@ export type RetrievedChunk = {
   similarity: number
 }
 
-// Le retrieval hybride récupère un pool large (candidats plausibles mais mal classés entre eux —
-// cosinus/RRF discrimine mal des chunks proches d'un même document), que le reranker départage
-// avant de ne garder que les meilleurs pour le LLM. Tailles calibrées, voir applyReranking.
-export const CANDIDATE_POOL_SIZE = 20
+// Nombre de chunks récupérés et envoyés au LLM. Mesuré sur le corpus réel : récupérer plus large
+// pour retrancher ensuite dégrade, parce que la taille demandée change aussi les limites internes
+// de la requête hybride, donc la fusion RRF elle-même (pool 8 : MRR 0,429 ; 12 : 0,414 ; 20 :
+// 0,395 ; 40 : 0,304 et un chunk attendu perdu). Voir docs-internal/conventions.md.
 export const FINAL_CONTEXT_SIZE = 8
 
 export const Retrieval = {
@@ -21,12 +21,11 @@ export const Retrieval = {
   isInScope: (chunks: RetrievedChunk[], threshold: number): boolean =>
     chunks.some((chunk) => chunk.similarity >= threshold),
 
-  // Réordonne les chunks selon les indices retournés par le reranker (cross-encoder, voir
-  // llamaClient.ts) et tronque au nombre final envoyé au LLM. Le cross-encoder lit question et
-  // chunk ensemble, là où la similarité cosinus compare deux embeddings calculés indépendamment.
-  // Gain mesuré à pool constant (20 candidats, 7 questions de contrôle) : hit-rate@8 5/7 -> 6/7 et
-  // MRR 0.423 -> 0.511. Élargir le pool au-delà de 20 dégrade (50 candidats : 5/7, MRR 0.493) —
-  // plus de candidats, plus d'occasions de mal classer. Voir docs-internal/conventions.md.
+  // Réordonne les chunks selon les indices retournés par un reranker cross-encoder et tronque au
+  // nombre final. PAS utilisé en production : mesuré sur le corpus réel, le reranking n'améliore
+  // aucune configuration (pool 8 : MRR 0,429 sans, 0,414 avec ; pool 20 : 0,395 sans, 0,333 avec)
+  // pour 15 à 25 s de latence par requête. Conservé pour le harness `bun run eval --rerank`, qui
+  // permet de refaire ce verdict si le corpus ou le modèle change — voir conventions.md.
   applyReranking: (chunks: RetrievedChunk[], order: number[], limit: number): RetrievedChunk[] =>
     order
       .slice(0, limit)

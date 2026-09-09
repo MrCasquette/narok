@@ -1,12 +1,11 @@
 import { getCorpus } from '../../domain/corpus/corpora.js'
 import {
-  CANDIDATE_POOL_SIZE,
   FINAL_CONTEXT_SIZE,
   Retrieval,
   type RetrievedChunk,
 } from '../../domain/retrieval/Retrieval.js'
 import { hybridSearch } from '../../domain/retrieval/retrieval.repository.js'
-import { chat, chatStream, embedQuery, rerank, type ChatMessage } from '../../infrastructure/llama/llamaClient.js'
+import { chat, chatStream, embedQuery, type ChatMessage } from '../../infrastructure/llama/llamaClient.js'
 
 export type ChatResult =
   | { ok: true; answer: string }
@@ -92,25 +91,17 @@ async function prepareChatContext(
   console.log(`[chat] embedding calculé (${Date.now() - t}ms)`)
 
   t = Date.now()
-  const candidates = await hybridSearch(corpus.key, searchQuery, queryEmbedding, CANDIDATE_POOL_SIZE)
-  const bestSimilarity = Math.max(0, ...candidates.map((chunk) => chunk.similarity))
+  const chunks = await hybridSearch(corpus.key, searchQuery, queryEmbedding, FINAL_CONTEXT_SIZE)
+  const bestSimilarity = Math.max(0, ...chunks.map((chunk) => chunk.similarity))
   console.log(
-    `[chat] retrieval (${Date.now() - t}ms) : ${candidates.length} candidats, ` +
+    `[chat] retrieval (${Date.now() - t}ms) : ${chunks.length} chunks, ` +
       `meilleure similarité=${bestSimilarity.toFixed(4)} (seuil=${corpus.minSimilarityThreshold})`,
   )
 
-  if (!Retrieval.isInScope(candidates, corpus.minSimilarityThreshold)) {
+  if (!Retrieval.isInScope(chunks, corpus.minSimilarityThreshold)) {
     console.log('[chat] hors périmètre, garde-fou déclenché')
     return { ok: false, reason: 'out-of-scope' }
   }
-
-  t = Date.now()
-  const rerankOrder = await rerank(
-    searchQuery,
-    candidates.map((chunk) => chunk.content),
-  )
-  const chunks = Retrieval.applyReranking(candidates, rerankOrder, FINAL_CONTEXT_SIZE)
-  console.log(`[chat] reranking (${Date.now() - t}ms) : ${chunks.length} chunks retenus`)
 
   const context = chunks.map((chunk: RetrievedChunk) => chunk.content).join('\n\n---\n\n')
   const systemPrompt =

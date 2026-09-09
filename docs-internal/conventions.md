@@ -46,13 +46,13 @@ Chaque maillon de la chaîne a été mesuré isolément sur un corpus de test r�
 (le chunk cible est-il dans les 8 envoyés au LLM) et MRR.
 
 Ces chiffres servent à comparer les variantes **entre elles**, pas à décrire la production : sur le
-corpus `docs` complet (3908 chunks), la même configuration retenue mesure hit-rate@8 = 5/7 et
-MRR = 0.333, la concurrence entre chunks étant bien plus forte. Le harness `bun run eval` rejoue
+corpus `docs` complet (3908 chunks), la configuration retenue mesure hit-rate@8 = 5/7 et
+MRR = 0.429, la concurrence entre chunks étant bien plus forte. Le harness `bun run eval` rejoue
 cette mesure de production ; toute comparaison de variantes doit se faire à corpus constant.
 
-| Variante | hit-rate@8 | MRR |
+| Variante (corpus réduit, 79 chunks) | hit-rate@8 | MRR |
 | --- | --- | --- |
-| **Retenue : header + pool 20 + reranker** | **6/7** | **0.511** |
+| Header + pool 20 + reranker | 6/7 | 0.511 |
 | Idem, pool 50 | 5/7 | 0.493 |
 | Baseline (pool 8, sans reranker) | 6/7 | 0.446 |
 | Enrichissement contextuel (1 phrase LLM/chunk) | 6/7 | 0.445 |
@@ -60,10 +60,34 @@ cette mesure de production ; toute comparaison de variantes doit se faire à cor
 | Pool 20 sans reranker (contrôle) | 5/7 | 0.423 |
 | HyPE (4 questions générées par chunk) | 5/7 | 0.299 |
 
+**Ces classements ne se transposent pas au corpus réel.** Remesuré sur `docs` complet (3908 chunks),
+le verdict sur le reranking s'inverse, et la configuration retenue est finalement la baseline
+d'origine du projet :
+
+| Variante (corpus `docs`, 3908 chunks) | hit-rate@8 | MRR |
+| --- | --- | --- |
+| **Retenue : pool 8, sans reranker** | **5/7** | **0.429** |
+| Pool 8, avec reranker | 5/7 | 0.414 |
+| Pool 12, sans reranker | 5/7 | 0.414 |
+| Pool 20, sans reranker | 5/7 | 0.395 |
+| Pool 20, avec reranker | 5/7 | 0.333 |
+| Pool 40, sans reranker | 4/7 | 0.304 |
+
+Sur 79 chunks, un pool de 20 couvre un quart du corpus et contient beaucoup de candidats faiblement
+liés, que le reranker trie utilement. Sur 3908 chunks, ce même pool est déjà très sélectif : tous
+les candidats sont plausibles, et le cross-encoder (cross-lingue français/anglais, quantifié) les
+rebat sans apporter de signal — parfois en rétrogradant le bon. Leçon de méthode : **une variante
+doit être validée à l'échelle réelle du corpus avant d'entrer en production.**
+
 Décisions qui en découlent :
 
-- **Reranker conservé** : c'est le seul ajout à gain net (à pool constant : 5/7 → 6/7, MRR
-  0.423 → 0.511). Pool de 20 candidats, tronqué à 8 après reranking — au-delà de 20, dégrade.
+- **Reranker écarté de la production** : gagnant sur le corpus réduit, perdant sur le corpus réel
+  dans toutes les configurations testées, pour 15 à 25 s de latence par requête. Le code reste
+  accessible via `bun run eval --rerank` pour refaire le verdict si le corpus ou le modèle change.
+- **Taille de récupération : 8 chunks, sans étage intermédiaire.** Récupérer large pour retrancher
+  ensuite dégrade, y compris sans reranking : le nombre demandé change aussi les limites internes
+  de la requête hybride, donc la fusion RRF elle-même. Un pool large n'est pas un sur-ensemble d'un
+  pool étroit.
 - **HyPE (questions hypothétiques indexées) écarté** : dégrade nettement. Multiplier par 4 le
   nombre d'entrées vectorielles injecte surtout des candidats concurrents, une question générée
   depuis un chunk hors-sujet pouvant matcher la question utilisateur mieux que le bon chunk.
@@ -93,6 +117,8 @@ qui sépare les questions légitimes des questions hors sujet. Le jeu de cas est
 `src/scripts/eval.cases.ts`. Usage : mesurer avant un changement, modifier, remesurer, comparer.
 
 ## Reranker
+
+Hors du chemin de production (voir ci-dessus), utilisable via `bun run eval --rerank`.
 
 `bge-reranker-v2-m3` (GGUF Q8_0), servi par une instance `llama-server` dédiée lancée avec
 `--reranking --pooling rank -b 4096 -ub 4096` (le batch physique par défaut de 512 est trop petit
