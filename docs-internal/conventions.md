@@ -128,10 +128,35 @@ produite fait conclure à un échec là où le pipeline fonctionne.
 
 ## Harness d'évaluation
 
-`bun run eval [corpus]` rejoue le chemin de production (embedding, recherche hybride, reranking,
-troncature) sur le corpus indexé et affiche hit-rate@8, MRR, les erreurs du garde-fou et la marge
-qui sépare les questions légitimes des questions hors sujet. Le jeu de cas est versionné dans
-`src/scripts/eval.cases.ts`. Usage : mesurer avant un changement, modifier, remesurer, comparer.
+`bun run eval [corpus] [--fast] [--pool=N]` rejoue le chemin de production sur le corpus indexé.
+Jeux de cas versionnés par corpus dans `src/scripts/eval.cases.ts`. Usage : mesurer avant un
+changement, modifier, remesurer, comparer — à corpus constant, les verdicts ne se transposent pas
+d'une échelle à l'autre.
+
+Deux niveaux de mesure, délibérément séparés :
+
+- **retrieval** : le passage attendu (identifié par une chaîne qui n'existe que dans lui) est-il
+  parmi les extraits envoyés au modèle — hit-rate@8 et MRR ;
+- **réponse** : le texte généré contient-il les termes attendus, et pas ceux d'une confusion connue.
+
+Ne mesurer que le retrieval induit en erreur, et l'a effectivement fait : deux configurations
+manquaient toutes deux le passage attendu, donc paraissaient équivalentes, alors que l'une menait
+le modèle à la bonne réponse et l'autre à inventer un nom de champ plausible mais faux. C'est ce
+qui a fait retenir la mauvaise configuration avant que le problème ne soit repéré. `--fast` saute
+la génération quand seul le retrieval est en jeu.
+
+### Corpus étalon
+
+`mdn` — documentation CSS de MDN en français (guides, how-to, tutoriels, référence des sélecteurs
+et des règles @ ; ~353k mots, soit l'échelle du corpus `docs`, choisie pour que les réglages restent
+comparables). Retenu pour régler la chaîne sur de la vraie documentation grand public **sans
+franchissement de langue** : questions en français contre documentation en français. Le corpus
+`docs` (Directus, en anglais) mêlait questions FR et doc EN, ce qui s'est révélé être un facteur
+confondant, notamment sur la stabilité du reranking.
+
+Le corpus n'est pas versionné (voir `.gitignore`). Pour le reconstituer : clone partiel de
+`mdn/translated-content` limité à `files/fr/web/css`, dont on retient `guides`, `how_to`,
+`tutorials` et, sous `reference`, `selectors` et `at-rules`.
 
 ## Reranker
 

@@ -20,6 +20,20 @@ export const corpora: Record<string, Corpus> = {
     // mesurée) tombait au milieu de la population légitime et rejetait des questions valides.
     minSimilarityThreshold: 0.38,
   },
+  // Corpus étalon : documentation MDN en français (guides, how-to, tutoriels, et référence des
+  // sélecteurs et règles @). Choisi pour régler la chaîne sur de la vraie documentation grand
+  // public, sans franchissement de langue (questions FR contre doc FR), à une échelle comparable
+  // au corpus `docs` — les réglages ne se transposent pas d'une échelle à l'autre, cf. conventions.
+  mdn: {
+    key: 'mdn',
+    label: 'MDN Web Docs — CSS (français)',
+    sourcePath: './content/mdn',
+    systemPromptTopic: 'la documentation CSS de MDN Web Docs',
+    // Provisoire, à calibrer avec `bun run eval mdn` une fois le corpus indexé (la mesure affiche
+    // le seuil idéal). Ne pas reprendre par analogie la valeur d'un autre corpus.
+    minSimilarityThreshold: 0.38,
+  },
+
   portfolio: {
     key: 'portfolio',
     label: 'Portfolio de Vincent',
