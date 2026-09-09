@@ -2,10 +2,70 @@ services:
   app:
     build: .
     env_file: .env
+    # `.env` décrit l'accès depuis l'hôte (`bun run dev`), en `localhost`. Depuis un conteneur,
+    # `localhost` désigne le conteneur lui-même : on réadresse ici vers les noms de services.
+    environment:
+      DATABASE_URL: postgres://narok:changeme@db:5432/narok
+      LLAMA_EMBEDDING_URL: http://llama-embedding:8080
+      LLAMA_CHAT_URL: http://llama-chat:8080
     ports:
       - "${API_PORT:-8100}:8100"
     depends_on:
-      - db
+      db:
+        condition: service_started
+      llama-embedding:
+        condition: service_healthy
+      llama-chat:
+        condition: service_healthy
+
+  # Les modèles GGUF ne sont pas versionnés (plusieurs Go) : ils sont montés depuis l'hôte, en
+  # lecture seule. `--host 0.0.0.0` est indispensable, le défaut n'écoute que sur la loopback du
+  # conteneur. Ports publiés sur ceux qu'utilise `.env`, pour que le développement sur l'hôte et
+  # l'exécution en conteneur visent les mêmes serveurs.
+  llama-embedding:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    labels:
+      - "wud.watch.digest=true"
+    command: >
+      -m /models/Qwen3-Embedding-0.6B-Q8_0.gguf
+      --embedding --pooling last
+      -c 4096 --threads 4
+      --host 0.0.0.0 --port 8080
+    volumes:
+      - ${LLAMA_MODELS_DIR:-/home/vincent/llm-test/models}:/models:ro
+    ports:
+      - "8081:8080"
+    # Plafond aligné sur --threads : empêche l'inférence de monopoliser la machine face aux autres
+    # services de l'hôte (streaming, pipeline médias) en cas de rafale de requêtes.
+    cpus: 4
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+  llama-chat:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    labels:
+      - "wud.watch.digest=true"
+    command: >
+      -m /models/granite-4.0-h-tiny-Q4_K_M.gguf
+      -c 4096 --threads 4
+      --host 0.0.0.0 --port 8080
+    volumes:
+      - ${LLAMA_MODELS_DIR:-/home/vincent/llm-test/models}:/models:ro
+    ports:
+      - "8083:8080"
+    cpus: 4
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 180s
 
   db:
     image: paradedb/paradedb:pg18
@@ -19,6 +79,7 @@ services:
       - "5433:5432"
     volumes:
       - narok-db:/var/lib/postgresql
+    restart: unless-stopped
 
 volumes:
   narok-db:

@@ -29,6 +29,23 @@ Script CLI (`bun run ingest <corpus>`) pour la v1, incrémental par hash de cont
 ElysiaJS). Un webhook + cron de sécurité (comme Arona) est la cible si une source déclenchante
 apparaît (ex : commit sur un repo de doc) — pas construit avant ce signal.
 
+## Serveurs llama.cpp (services `llama-embedding` et `llama-chat`)
+
+Image officielle `ghcr.io/ggml-org/llama.cpp:server`, un service par modèle. Points à connaître :
+
+- `--host 0.0.0.0` est obligatoire : par défaut le serveur n'écoute que la loopback du conteneur,
+  donc reste injoignable depuis les autres services.
+- Les modèles GGUF (plusieurs Go) ne sont pas dans l'image ni versionnés : montés en lecture seule
+  depuis l'hôte via `LLAMA_MODELS_DIR`.
+- Ports publiés sur ceux que déclare `.env` (8081 embedding, 8083 génération), pour que le
+  développement sur l'hôte (`bun run dev`) et l'exécution en conteneur visent les mêmes serveurs.
+  Le service `app`, lui, surcharge ces URL vers les noms de services : dans un conteneur,
+  `localhost` désigne le conteneur lui-même.
+- Plafond `cpus: 4` aligné sur `--threads 4`, pour que l'inférence ne monopolise pas la machine
+  face aux autres services de l'hôte en cas de rafale de requêtes.
+- Le passage des binaires locaux aux conteneurs a été vérifié à l'identique : `bun run eval` rend
+  exactement les mêmes similarités (5/7, MRR 0,429).
+
 ## Version Postgres (image `db`)
 
 Sur `pg18` (`paradedb/paradedb:pg18`), label `wud.tag.include=^pg\d+$` — filtre sur les tags courts

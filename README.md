@@ -21,12 +21,16 @@ d'architecture.
 
 ```sh
 cp .env.example .env
-docker compose up -d      # Postgres + ParadeDB
+docker compose up -d      # Postgres/ParadeDB + les deux serveurs llama.cpp
 bun install
 bun run db:push
 bun run ingest docs       # indexe ./content/docs (corpus à fournir, non versionné)
 bun run dev
 ```
+
+Les modèles GGUF ne sont pas versionnés : ils sont montés depuis l'hôte, en lecture seule, depuis
+le dossier désigné par `LLAMA_MODELS_DIR` (par défaut `/home/vincent/llm-test/models`). Il doit
+contenir `Qwen3-Embedding-0.6B-Q8_0.gguf` et `granite-4.0-h-tiny-Q4_K_M.gguf`.
 
 `bun run eval` mesure la qualité du retrieval sur le corpus indexé (hit-rate@8, MRR, garde-fou) —
 à lancer avant et après toute modification de la chaîne de recherche.
