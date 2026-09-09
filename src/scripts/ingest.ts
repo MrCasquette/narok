@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm'
 import { chunkDocument } from '../domain/chunk/chunking.js'
 import { getCorpus } from '../domain/corpus/corpora.js'
 import type { Document } from '../domain/document/Document.js'
-import { db } from '../infrastructure/db/client.js'
+import { client, db } from '../infrastructure/db/client.js'
 import { chunks, documents } from '../infrastructure/db/schema.js'
 import { embed } from '../infrastructure/llama/llamaClient.js'
 
@@ -68,3 +68,4 @@ async function main() {
 }
 
 await main()
+await client.end()

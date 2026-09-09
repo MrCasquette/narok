@@ -14,5 +14,6 @@ export const env = {
   DATABASE_URL: required('DATABASE_URL'),
   LLAMA_EMBEDDING_URL: required('LLAMA_EMBEDDING_URL'),
   LLAMA_CHAT_URL: required('LLAMA_CHAT_URL'),
+  LLAMA_RERANK_URL: required('LLAMA_RERANK_URL'),
   API_PORT: Number(process.env.API_PORT ?? 8100),
 } as const

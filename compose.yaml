@@ -8,7 +8,9 @@ services:
       - db
 
   db:
-    image: paradedb/paradedb:pg17
+    image: paradedb/paradedb:pg18
+    labels:
+      - "wud.tag.include=^pg\\d+$$"
     environment:
       POSTGRES_USER: narok
       POSTGRES_PASSWORD: changeme
@@ -16,7 +18,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - narok-db:/var/lib/postgresql/data
+      - narok-db:/var/lib/postgresql
 
 volumes:
   narok-db:

@@ -28,6 +28,12 @@ bun run ingest docs       # indexe ./content/docs
 bun run dev
 ```
 
+Un reranker (`bge-reranker-v2-m3`) tourne dans une instance `llama-server` distincte, lancée avec
+`--reranking --pooling rank -b 4096 -ub 4096` (voir `LLAMA_RERANK_URL` dans `.env.example`).
+
+`bun run eval` mesure la qualité du retrieval sur le corpus indexé (hit-rate@8, MRR, garde-fou) —
+à lancer avant et après toute modification de la chaîne de recherche.
+
 ## Structure
 
 ```

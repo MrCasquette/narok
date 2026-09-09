@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>narok — test chat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-clike.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-css.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-typescript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-docker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-graphql.min.js"></script>
+<style>
+  /* ---- Thème "Shades of Purple" repris de directus-rag (src/assets/prism-shades-of-purple.css) ---- */
+  code[class*='language-'], pre[class*='language-'] {
+    color: #9efeff;
+    direction: ltr;
+    text-align: left;
+    white-space: pre;
+    word-spacing: normal;
+    word-break: normal;
+    tab-size: 4;
+    hyphens: none;
+    font-family: 'Fira Code', Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+    font-weight: 400;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  pre[class*='language-']::selection, pre[class*='language-'] ::selection,
+  code[class*='language-']::selection, code[class*='language-'] ::selection {
+    color: inherit;
+    background: #a599e9;
+  }
+  pre[class*='language-'] { padding: 1em; margin: 0.5em 0; overflow: auto; border-radius: 8px; }
+  :not(pre) > code[class*='language-'], pre[class*='language-'] { background: #1e1e3f; }
+  :not(pre) > code[class*='language-'] { padding: 0.15em 0.4em; border-radius: 0.3em; }
+  .token { font-weight: 400; }
+  .token.comment, .token.prolog, .token.cdata { color: #b362ff; }
+  .token.delimiter, .token.keyword, .token.selector, .token.important, .token.atrule { color: #ff9d00; }
+  .token.operator, .token.attr-name { color: rgb(255, 180, 84); }
+  .token.punctuation { color: #ffffff; }
+  .token.boolean { color: rgb(255, 98, 140); }
+  .token.tag, .token.tag .punctuation, .token.doctype, .token.builtin { color: rgb(255, 157, 0); }
+  .token.entity, .token.symbol { color: #6897bb; }
+  .token.number { color: #ff628c; }
+  .token.property, .token.constant, .token.variable { color: #ff628c; }
+  .token.string, .token.char { color: #a5ff90; }
+  .token.attr-value, .token.attr-value .punctuation { color: #a5c261; }
+  .token.attr-value .punctuation:first-child { color: #a9b7c6; }
+  .token.url { color: #287bde; text-decoration: underline; }
+  .token.function { color: rgb(250, 208, 0); }
+  .token.class-name { color: #fb94ff; }
+  .token.bold { font-weight: bold; }
+  .token.italic { font-style: italic; }
+
+  /* ---- Palette directus-rag (src/assets/main.css) ---- */
+  :root {
+    --color-primary: rgb(149 133 255);
+    --color-secondary: #6644ff;
+    --color-accent: #ff99dd;
+    --color-accent-shiny: rgb(254 104 201);
+    --color-dark: #111827;
+    --color-grey: #1f2937;
+    --color-bubble: #1f2937;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--color-dark);
+    color: #ffffff;
+    font-family: 'Poppins', sans-serif;
+    display: flex;
+    justify-content: center;
+  }
+  ::selection { background-color: var(--color-primary); color: white; }
+  ::-webkit-scrollbar { width: 10px; }
+  ::-webkit-scrollbar-track { background: var(--color-dark); }
+  ::-webkit-scrollbar-thumb { background: var(--color-secondary); border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-primary); }
+
+  .app {
+    width: 100%;
+    max-width: 760px;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    flex: 1;
+  }
+  header .field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #9ca3af;
+  }
+  input, select {
+    font: inherit;
+    color: #fff;
+    background: var(--color-grey);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
+  #corpus { width: 100px; }
+  #api-url { width: 180px; font-size: 12px; }
+
+  main {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .empty {
+    margin: auto;
+    color: #6b7280;
+    font-size: 13px;
+    text-align: center;
+  }
+  .entry { display: flex; flex-direction: column; gap: 6px; }
+  .label { font-size: 12px; color: #9ca3af; }
+  .question-bubble {
+    background: var(--color-bubble);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .answer-bubble {
+    background: var(--color-bubble);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .answer-bubble.error { color: #fca5a5; }
+  .answer-bubble :is(p, ul, ol) { margin: 0 0 0.6em; }
+  .answer-bubble :is(p, ul, ol):last-child { margin-bottom: 0; }
+  .answer-bubble a { color: var(--color-primary); }
+  .answer-bubble :not(pre) > code {
+    background: #1e1e3f;
+    color: #9efeff;
+    padding: 0.15em 0.4em;
+    border-radius: 0.3em;
+    font-size: 0.9em;
+  }
+
+  .thinking {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #9ca3af;
+    font-size: 13px;
+  }
+  .thinking .dots::after {
+    content: '';
+    animation: dots 1.2s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0% { content: ''; }
+    25% { content: '.'; }
+    50% { content: '..'; }
+    75% { content: '...'; }
+    100% { content: ''; }
+  }
+
+  form {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 14px 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+  }
+  form textarea {
+    flex: 1;
+    resize: none;
+    font: inherit;
+    font-size: 14px;
+    color: #fff;
+    background: var(--color-grey);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 10px 12px;
+    height: 44px;
+    max-height: 140px;
+  }
+  button[type="submit"] {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-accent-shiny);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  button[type="submit"]:disabled { opacity: 0.4; cursor: default; }
+  button[type="submit"] svg { width: 18px; height: 18px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>narok — test chat</h1>
+    <span class="field">
+      corpus
+      <input id="corpus" list="corpus-options" value="docs" />
+      <datalist id="corpus-options">
+        <option value="docs"></option>
+        <option value="portfolio"></option>
+      </datalist>
+    </span>
+    <span class="field">
+      API
+      <input id="api-url" value="http://localhost:8100" />
+    </span>
+  </header>
+
+  <main id="log">
+    <div class="empty" id="empty-hint">Pose une question sur le corpus sélectionné.</div>
+  </main>
+
+  <form id="form">
+    <textarea id="question" placeholder="Écris ta question…" rows="1" required></textarea>
+    <button id="send" type="submit" aria-label="Envoyer">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2.94 2.94a1.5 1.5 0 0 1 1.62-.32l17 7a1.5 1.5 0 0 1 0 2.76l-17 7a1.5 1.5 0 0 1-2.06-1.75L4.5 12 2.5 5.37a1.5 1.5 0 0 1 .44-2.43Z"/></svg>
+    </button>
+  </form>
+</div>
+
+<script>
+  // Phrases d'attente affichées en machine à écrire pendant la génération (~20-52s observés).
+  // Calibrage volontairement grossier (pas de calcul scientifique pour 7 phrases) : vitesse de
+  // frappe + pause de lecture fixes. L'index de phrase est conservé au niveau module (pas dans
+  // startWaitingCycle) pour persister d'une question à l'autre — sinon on revoit toujours "Je
+  // suis le RAG Narok." en premier, ce qui lasse vite sur une session de test avec beaucoup
+  // d'allers-retours. Le cycle boucle indéfiniment (modulo) plutôt que de se figer sur la
+  // dernière phrase si une génération dépasse le temps habituel.
+  const waitingPhrases = [
+    'Je suis le RAG Narok.',
+    "Y'a pas d'hélice hélas.",
+    "C'est là qu'est l'os.",
+    'La blanquette est bonne',
+    'Le code c\'est : Le code.',
+    "Y'a un U dans amblance ?",
+    'À une vache près.',
+  ]
+  const TYPE_SPEED_MS = 45
+  const HOLD_MS = 3200
+  let waitingPhraseIndex = 0
+
+  function startWaitingCycle(labelEl) {
+    let cancelled = false
+
+    function typePhrase(text, onDone) {
+      let i = 0
+      labelEl.textContent = ''
+      const interval = setInterval(() => {
+        if (cancelled) {
+          clearInterval(interval)
+          return
+        }
+        i++
+        labelEl.textContent = text.slice(0, i)
+        if (i >= text.length) {
+          clearInterval(interval)
+          onDone()
+        }
+      }, TYPE_SPEED_MS)
+    }
+
+    function next() {
+      if (cancelled) return
+      typePhrase(waitingPhrases[waitingPhraseIndex], () => {
+        if (cancelled) return
+        setTimeout(() => {
+          if (cancelled) return
+          waitingPhraseIndex = (waitingPhraseIndex + 1) % waitingPhrases.length
+          next()
+        }, HOLD_MS)
+      })
+    }
+
+    next()
+    return { stop: () => { cancelled = true } }
+  }
+
+  const chatOutOfScopeFallback =
+    "Je ne peux répondre qu'aux questions en lien avec ce corpus. Reformule ta question sur ce sujet."
+
+  const md = window.markdownit({
+    html: false,
+    linkify: true,
+    highlight: (code, lang) => {
+      try {
+        const grammar = Prism.languages[lang]
+        if (!grammar) return `<pre><code>${md.utils.escapeHtml(code)}</code></pre>`
+        const highlighted = Prism.highlight(code, grammar, lang)
+        return `<pre class="language-${lang}"><code class="language-${lang}">${highlighted}</code></pre>`
+      } catch {
+        return `<pre><code>${md.utils.escapeHtml(code)}</code></pre>`
+      }
+    },
+  })
+
+  // Historique borné côté client (le serveur ne retient de toute façon que les derniers échanges
+  // pour la reformulation — voir MAX_HISTORY_TURNS côté service.ts).
+  const MAX_CLIENT_HISTORY = 10
+  let conversationHistory = []
+
+  const log = document.getElementById('log')
+  const emptyHint = document.getElementById('empty-hint')
+  const form = document.getElementById('form')
+  const questionInput = document.getElementById('question')
+  const corpusInput = document.getElementById('corpus')
+  const apiUrlInput = document.getElementById('api-url')
+  const sendButton = document.getElementById('send')
+
+  corpusInput.addEventListener('change', () => {
+    conversationHistory = []
+  })
+
+  questionInput.addEventListener('input', () => {
+    questionInput.style.height = 'auto'
+    questionInput.style.height = `${Math.min(questionInput.scrollHeight, 140)}px`
+  })
+  questionInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      form.requestSubmit()
+    }
+  })
+
+  function scrollToBottom() {
+    log.scrollTop = log.scrollHeight
+  }
+
+  function addEntry(question) {
+    emptyHint.remove()
+    const entry = document.createElement('div')
+    entry.className = 'entry'
+    entry.innerHTML = `
+      <div class="label">Toi</div>
+      <div class="question-bubble"></div>
+      <div class="label">narok</div>
+      <div class="answer-bubble"><span class="thinking"><span class="thinking-label"></span><span class="dots"></span></span></div>
+    `
+    entry.querySelector('.question-bubble').textContent = question
+    log.appendChild(entry)
+    scrollToBottom()
+    return entry.querySelector('.answer-bubble')
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault()
+    const question = questionInput.value.trim()
+    const corpus = corpusInput.value.trim()
+    if (!question || !corpus) return
+
+    const answerBubble = addEntry(question)
+    questionInput.value = ''
+    questionInput.style.height = 'auto'
+    sendButton.disabled = true
+    const waitingCycle = startWaitingCycle(answerBubble.querySelector('.thinking-label'))
+
+    try {
+      const res = await fetch(`${apiUrlInput.value.replace(/\/$/, '')}/chat/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ corpus, question, history: conversationHistory }),
+      })
+      if (!res.ok || !res.body) {
+        answerBubble.classList.add('error')
+        answerBubble.textContent = `Erreur (${res.status})`
+        return
+      }
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let fullText = ''
+      let firstToken = true
+      let hadError = false
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+
+        const events = buffer.split('\n\n')
+        buffer = events.pop() ?? ''
+
+        for (const rawEvent of events) {
+          let eventName = 'message'
+          const dataLines = []
+          for (const line of rawEvent.split('\n')) {
+            if (line.startsWith('event:')) eventName = line.slice(6).trim()
+            else if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''))
+          }
+          const data = dataLines.join('\n')
+          if (!data) continue
+
+          // Le backend envoie toujours des objets JSON (jamais une string brute) pour que les
+          // retours à la ligne internes (sauts de paragraphe markdown) soient correctement échappés.
+          const payload = JSON.parse(data)
+
+          if (eventName === 'error') {
+            hadError = true
+            waitingCycle.stop()
+            answerBubble.classList.add('error')
+            answerBubble.textContent =
+              payload.reason === 'unknown-corpus' ? 'Erreur : corpus inconnu' : chatOutOfScopeFallback
+            firstToken = false
+          } else if (eventName === 'token') {
+            if (firstToken) {
+              waitingCycle.stop()
+              answerBubble.innerHTML = ''
+              firstToken = false
+            }
+            fullText += payload.content
+            answerBubble.innerHTML = md.render(fullText)
+            scrollToBottom()
+          }
+        }
+      }
+
+      // On ne garde en historique que les échanges qui ont vraiment abouti à une réponse — un
+      // rejet hors-périmètre ou une erreur n'apporte rien à la reformulation des questions suivantes.
+      if (!hadError && fullText) {
+        conversationHistory.push({ question, answer: fullText })
+        conversationHistory = conversationHistory.slice(-MAX_CLIENT_HISTORY)
+      }
+    } catch (err) {
+      answerBubble.classList.add('error')
+      answerBubble.textContent = `Connexion impossible : ${err.message}`
+    } finally {
+      waitingCycle.stop()
+      sendButton.disabled = false
+      scrollToBottom()
+      questionInput.focus()
+    }
+  })
+</script>
+</body>
+</html>
