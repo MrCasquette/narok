@@ -1,16 +1,15 @@
 import '../env.js'
 
 import { getCorpus } from '../domain/corpus/corpora.js'
-import { env } from '../env.js'
 import { FINAL_CONTEXT_SIZE, Retrieval } from '../domain/retrieval/Retrieval.js'
 import { hybridSearch } from '../domain/retrieval/retrieval.repository.js'
 import { client } from '../infrastructure/db/client.js'
-import { embedQuery, rerank } from '../infrastructure/llama/llamaClient.js'
+import { embedQuery } from '../infrastructure/llama/llamaClient.js'
 import { inScopeCases, outOfScopeQuestions } from './eval.cases.js'
 
 // Mesure la qualité du retrieval sur le corpus réellement indexé, en rejouant exactement le chemin
-// de production (même embedding, même recherche hybride, même reranking, même troncature). Sert à
-// comparer une modification à l'état antérieur : lancer avant, modifier, relancer, comparer.
+// de production (même embedding, même recherche hybride, même troncature). Sert à comparer une
+// modification à l'état antérieur : lancer avant, modifier, relancer, comparer.
 //
 // Deux métriques :
 // - hit-rate@N : le chunk attendu est-il dans les N chunks envoyés au LLM (ce qui compte vraiment,
@@ -24,11 +23,6 @@ import { inScopeCases, outOfScopeQuestions } from './eval.cases.js'
 // est bien plus faible et inverse certains verdicts (le reranking gagnait sur 79 chunks, il perd
 // sur 3908). Toute comparaison de variantes exige le même corpus.
 
-// `--rerank` ajoute une étape de reranking par cross-encoder, absente de la production faute de
-// gain mesuré : l'option existe pour refaire ce verdict (autre corpus, autre modèle). Nécessite
-// LLAMA_RERANK_URL et une instance llama-server chargée d'un modèle reranker.
-const withReranking = process.argv.includes('--rerank')
-
 // `--pool=N` récupère N candidats avant de tronquer au contexte final. Attention : N ne change pas
 // que le nombre de candidats, il change aussi les limites internes de la requête hybride, donc la
 // fusion RRF elle-même — un pool plus large n'est donc pas un sur-ensemble d'un pool plus étroit.
@@ -39,20 +33,9 @@ async function retrieveFinalChunks(question: string, corpusKey: string) {
   const queryEmbedding = await embedQuery(question)
   const candidates = await hybridSearch(corpusKey, question, queryEmbedding, poolSize)
 
-  const finalChunks = withReranking
-    ? Retrieval.applyReranking(
-        candidates,
-        await rerank(
-          question,
-          candidates.map((chunk) => chunk.content),
-        ),
-        FINAL_CONTEXT_SIZE,
-      )
-    : candidates.slice(0, FINAL_CONTEXT_SIZE)
-
   return {
     candidates,
-    finalChunks,
+    finalChunks: candidates.slice(0, FINAL_CONTEXT_SIZE),
     bestSimilarity: Math.max(0, ...candidates.map((chunk) => chunk.similarity)),
   }
 }
@@ -65,15 +48,9 @@ async function main() {
     process.exit(1)
   }
 
-  if (withReranking && !env.LLAMA_RERANK_URL) {
-    console.error('--rerank nécessite LLAMA_RERANK_URL (instance llama-server avec modèle reranker)')
-    process.exit(1)
-  }
-
   console.log(`# Évaluation du retrieval — corpus "${corpusKey}"`)
   console.log(
-    `  pool=${poolSize} contexte=${FINAL_CONTEXT_SIZE} ` +
-      `seuil=${corpus.minSimilarityThreshold} reranking=${withReranking ? 'oui' : 'non'}\n`,
+    `  pool=${poolSize} contexte=${FINAL_CONTEXT_SIZE} seuil=${corpus.minSimilarityThreshold}\n`,
   )
 
   let hits = 0

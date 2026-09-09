@@ -98,9 +98,9 @@ doit être validée à l'échelle réelle du corpus avant d'entrer en production
 
 Décisions qui en découlent :
 
-- **Reranker écarté de la production** : gagnant sur le corpus réduit, perdant sur le corpus réel
-  dans toutes les configurations testées, pour 15 à 25 s de latence par requête. Le code reste
-  accessible via `bun run eval --rerank` pour refaire le verdict si le corpus ou le modèle change.
+- **Reranker écarté** : gagnant sur le corpus réduit, perdant sur le corpus réel dans toutes les
+  configurations testées, pour 15 à 25 s de latence par requête. Code et modèles supprimés — la
+  section « Reranker » plus bas garde de quoi refaire l'expérience si le contexte change.
 - **Taille de récupération : 8 chunks, sans étage intermédiaire.** Récupérer large pour retrancher
   ensuite dégrade, y compris sans reranking : le nombre demandé change aussi les limites internes
   de la requête hybride, donc la fusion RRF elle-même. Un pool large n'est pas un sur-ensemble d'un
@@ -135,9 +135,12 @@ qui sépare les questions légitimes des questions hors sujet. Le jeu de cas est
 
 ## Reranker
 
-Hors du chemin de production (voir ci-dessus), utilisable via `bun run eval --rerank`.
+Testé puis **entièrement retiré du code** (mesuré perdant, voir ci-dessus). Cette section existe
+pour pouvoir refaire l'expérience sans repartir de zéro, pas pour décrire une capacité existante :
+il faut réécrire l'appel client et re-télécharger un modèle.
 
-`bge-reranker-v2-m3` (GGUF Q8_0), servi par une instance `llama-server` dédiée lancée avec
+`bge-reranker-v2-m3` (GGUF Q8_0, `gpustack/bge-reranker-v2-m3-GGUF`), servi par une instance
+`llama-server` dédiée lancée avec
 `--reranking --pooling rank -b 4096 -ub 4096` (le batch physique par défaut de 512 est trop petit
 pour des chunks de ~300 mots et fait échouer la requête en 500). Endpoint `/v1/rerank`.
 
