@@ -28,6 +28,7 @@ services:
   # l'exécution en conteneur visent les mêmes serveurs.
   llama-embedding:
     image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: rag-llama-embedding
     labels:
       - "wud.watch.digest=true"
     # nice/ionice : service perso non-critique, doit céder CPU/IO plutôt que concurrencer
@@ -63,6 +64,7 @@ services:
 
   llama-chat:
     image: ghcr.io/ggml-org/llama.cpp:server
+    container_name: rag-llama-chat
     labels:
       - "wud.watch.digest=true"
     # -c 8192 : avec 4096, un contexte de 8 chunks occupait ~4000 tokens et il n'en restait que 82
@@ -96,6 +98,7 @@ services:
 
   db:
     image: paradedb/paradedb:pg18
+    container_name: rag-postgres
     labels:
       - "wud.tag.include=^pg\\d+$$"
     cpus: 2
