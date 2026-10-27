@@ -29,7 +29,7 @@ bun run dev
 ```
 
 Les modèles GGUF ne sont pas versionnés : ils sont montés depuis l'hôte, en lecture seule, depuis
-le dossier désigné par `LLAMA_MODELS_DIR` (par défaut `/home/vincent/llm-test/models`). Il doit
+le dossier désigné par `LLAMA_MODELS_DIR` (par défaut `/srv/infra/rag-llm-test/models`). Il doit
 contenir `Qwen3-Embedding-0.6B-Q8_0.gguf` et `granite-4.0-h-tiny-Q4_K_M.gguf`.
 
 `bun run eval` mesure la qualité du retrieval sur le corpus indexé (hit-rate@8, MRR, garde-fou) —

@@ -1,6 +1,8 @@
 services:
   app:
     build: .
+    cpus: 2
+    mem_limit: 1g
     env_file: .env
     # `.env` décrit l'accès depuis l'hôte (`bun run dev`), en `localhost`. Depuis un conteneur,
     # `localhost` désigne le conteneur lui-même : on réadresse ici vers les noms de services.
@@ -9,7 +11,9 @@ services:
       LLAMA_EMBEDDING_URL: http://llama-embedding:8080
       LLAMA_CHAT_URL: http://llama-chat:8080
     ports:
-      - "${API_PORT:-8100}:8100"
+      - "127.0.0.1:${API_PORT:-8100}:8100"
+    cap_drop:
+      - ALL
     depends_on:
       db:
         condition: service_started
@@ -26,18 +30,29 @@ services:
     image: ghcr.io/ggml-org/llama.cpp:server
     labels:
       - "wud.watch.digest=true"
+    # nice/ionice : service perso non-critique, doit céder CPU/IO plutôt que concurrencer
+    # streaming/pipeline média en cas de contention (même logique que Tdarr/AudioMuse).
+    entrypoint: ["nice", "-n", "10", "ionice", "-c", "3", "/app/llama-server"]
     command: >
       -m /models/Qwen3-Embedding-0.6B-Q8_0.gguf
       --embedding --pooling last
       -c 4096 --threads 4
       --host 0.0.0.0 --port 8080
     volumes:
-      - ${LLAMA_MODELS_DIR:-/home/vincent/llm-test/models}:/models:ro
+      - ${LLAMA_MODELS_DIR:-/srv/infra/rag-llm-test/models}:/models:ro
     ports:
-      - "8081:8080"
+      - "127.0.0.1:8081:8080"
+    cap_drop:
+      - ALL
     # Plafond aligné sur --threads : empêche l'inférence de monopoliser la machine face aux autres
     # services de l'hôte (streaming, pipeline médias) en cas de rafale de requêtes.
     cpus: 4
+    # cpu_shares/blkio_config : complètent nice/ionice au niveau cgroup (poids relatif),
+    # même logique que Tdarr/AudioMuse — cède CPU et I/O sous contention.
+    cpu_shares: 256
+    blkio_config:
+      weight: 100
+    mem_limit: 2g
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
@@ -55,15 +70,22 @@ services:
     # 2026-09-09). Agrandir la fenêtre ne coûte pas de temps — le prefill se paie sur les tokens
     # réellement envoyés (92 tk/s mesurés), pas sur la taille allouée — seulement de la RAM, et
     # Granite 4.0-H est un hybride Mamba dont la plupart des couches ont un état de taille fixe.
+    entrypoint: ["nice", "-n", "10", "ionice", "-c", "3", "/app/llama-server"]
     command: >
       -m /models/granite-4.0-h-tiny-Q4_K_M.gguf
       -c 8192 --threads 4
       --host 0.0.0.0 --port 8080
     volumes:
-      - ${LLAMA_MODELS_DIR:-/home/vincent/llm-test/models}:/models:ro
+      - ${LLAMA_MODELS_DIR:-/srv/infra/rag-llm-test/models}:/models:ro
     ports:
-      - "8083:8080"
+      - "127.0.0.1:8083:8080"
+    cap_drop:
+      - ALL
     cpus: 4
+    cpu_shares: 256
+    blkio_config:
+      weight: 100
+    mem_limit: 6g
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
@@ -76,14 +98,23 @@ services:
     image: paradedb/paradedb:pg18
     labels:
       - "wud.tag.include=^pg\\d+$$"
+    cpus: 2
+    mem_limit: 1g
     environment:
       POSTGRES_USER: narok
       POSTGRES_PASSWORD: changeme
       POSTGRES_DB: narok
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - narok-db:/var/lib/postgresql
+    # Demarre directement sous postgres (uid 999) au lieu de laisser l'entrypoint
+    # basculer depuis root via gosu : plus aucune phase root, donc AUCUNE capability
+    # a accorder (le jeu CHOWN/DAC_OVERRIDE/FOWNER/SETGID/SETUID ne sert qu'a gosu).
+    # Possible car PGDATA (/var/lib/postgresql/18/docker) appartient deja a postgres.
+    user: postgres
+    cap_drop:
+      - ALL
     restart: unless-stopped
 
 volumes:
